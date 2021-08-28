@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31410.357
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DNAC", "DNAC\DNAC.csproj", "{5A840097-D3A1-4B15-906B-94375CD7CED6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5A840097-D3A1-4B15-906B-94375CD7CED6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A840097-D3A1-4B15-906B-94375CD7CED6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A840097-D3A1-4B15-906B-94375CD7CED6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A840097-D3A1-4B15-906B-94375CD7CED6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AB7ED1ED-24F6-4499-931E-6BEEDC431B99}
+	EndGlobalSection
+EndGlobal
