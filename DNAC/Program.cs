@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 namespace DNAC
 {
@@ -8,16 +9,18 @@ namespace DNAC
     {
         ADENINE = 0, //00
         CYTOSINE = 1, //01
-        GUANINE = 2, //10
-        THYMINE = 3, //11
+        GUANINE = 3, //10
+        THYMINE = 2, //11
+        UNRECOGNIZED = 4 //00
     }
 
     public enum mRNABases
     {
         URACIL = 0, //00
         GUANINE = 1, //01
-        CYTOSINE = 2, //10
-        ADENINE = 3 //11
+        CYTOSINE = 3, //10
+        ADENINE = 2, //11
+        UNRECOGNIZED = 4 //00
     }
 
     public enum AminoAcids
@@ -60,35 +63,81 @@ namespace DNAC
             this.base3 = base3;
         }
     }
+
+    public struct UnknownDNADeltaInfo
+    {
+        public int index;
+        public int duration;
+
+        public UnknownDNADeltaInfo(int index, int duration)
+        {
+            this.index = index;
+            this.duration = duration;
+        }
+    }
     #endregion
 
     class Program
     {
         private static byte[] byteList;
-        private static string dnaStream = "CAT";
-
-        
+        private static string dnaStream = "ACCGCA";
+        private static UnknownDNAHandler NDNAHandler;
 
         static void Main(string[] args)
         {
             AminoAcidConversion.CacheConversionChart();
-
-            Bitpacker.PackByteList(ref dnaStream, ref byteList);
-
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
+            dnaStream = System.IO.File.ReadAllText(@"Myfilepath");
 
-            for (int i=0; i<byteList.Length; i++) {
+            NDNAHandler = new UnknownDNAHandler();
 
-                Codon? codon = Bitpacker.GetCodonAtPosition(i, ref byteList);
-                if (!codon.HasValue) break;
-                Codon codonReal = codon.GetValueOrDefault();
-                Diagnostics.PrintCodon(codonReal, true);
+            Bitpacker.PackByteList(ref dnaStream, ref byteList, NDNAHandler);
+
+            for (int i = 0; i < byteList.Length; i++)
+            {
+                if (!Bitpacker.GetCodonAtPosition(i, ref byteList).HasValue) break;
             }
 
             stopWatch.Stop();
+            Console.WriteLine("Took {0} seconds and {1} milliseconds to compute codons", stopWatch.Elapsed.Seconds, stopWatch.Elapsed.Milliseconds);
+        }
+    }
 
-            Console.WriteLine("{0} seconds and {1} milliseconds", stopWatch.Elapsed.Seconds, stopWatch.Elapsed.Milliseconds);
+    public class UnknownDNAHandler
+    {
+        private List<UnknownDNADeltaInfo> unknownDNADeltaInfo = new List<UnknownDNADeltaInfo>();
+        private int duration = 0;
+        private int index = 0;
+
+        public void appendCompressedUnknownDNAInfo(int index, DNABases @base)
+        {
+            //Appends to reference unknown DNA array at index given DNA stream, returns index to start searching again.
+
+            if (@base == DNABases.UNRECOGNIZED)
+            {
+                if (duration <= 0)
+                {
+                    this.index = index;
+                }
+                duration++;
+            }
+            else
+            {
+                if (duration > 0)
+                {
+                    unknownDNADeltaInfo.Add(new UnknownDNADeltaInfo(this.index, duration));
+                    duration = 0;
+                }
+            }
+        }
+
+        public void DebugDeltaInfo()
+        {
+            for (int i=0; i<unknownDNADeltaInfo.Count; i++)
+            {
+                Console.WriteLine("Index: {0} through duration: {1}", unknownDNADeltaInfo[i].index, unknownDNADeltaInfo[i].duration);
+            }
         }
     }
 }

@@ -14,6 +14,8 @@
                     return mRNABases.GUANINE;
                 case 'U':
                     return mRNABases.URACIL;
+                case 'N':
+                    return mRNABases.UNRECOGNIZED;
             }
 
             throw new System.ArgumentException($"Attempted conversion from Char ({character}) to mRNA. Make sure argument is only 'A', 'C', 'G', or 'T'");

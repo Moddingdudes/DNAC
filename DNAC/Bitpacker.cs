@@ -1,25 +1,25 @@
 ﻿namespace DNAC
 {
-    internal static class Bitpacker
+    public static class Bitpacker
     {
-        private static byte localOffset = 6; //Offset for bits in current byte
+        private static sbyte localOffset = 6; //Offset for bits in current byte
+        private static byte endPadding; //How many bits do we have outside of the last bit that is unused?
 
-        private static byte ConvertBaseToByte(DNABases @base)
+        public static byte ConvertBaseToByte(DNABases @base)
         {
             return (byte)(@base.GetHashCode() & 3);
         }
 
         private static void MergeBytes(byte @base, ref byte @byte)
         {
-            if (localOffset <= 0) localOffset = 6;
             byte mask = (byte)(@base << localOffset);
-
             @byte = (byte)(@byte | mask);
 
             localOffset -= 2;
+            if (localOffset < 0) localOffset = 6;
         }
 
-        public static void PackByteList(ref string baseString, ref byte[] byteList)
+        public static void PackByteList(ref string baseString, ref byte[] byteList, UnknownDNAHandler NDNAHandler = null)
         {
             if ((baseString.Length & 3) == 0)
             {
@@ -29,13 +29,25 @@
             {
                 byteList = new byte[(baseString.Length / 4) + 1];
             }
+            
+
+            // 9 * 2
+
+            endPadding = (byte)(8 - ((baseString.Length * 2) % 8));
+            if (endPadding == 8) endPadding = 0;
 
             DNABases[] baseArray = new DNABases[4];
             byte count = 0;
             uint byteListIndex = 0;
+
             for (int i = 0; i < baseString.Length; i++)
             {
                 DNABases @base = DNAOperations.GetDNABaseFromChar(baseString[i]);
+                if (NDNAHandler != null)
+                {
+                    NDNAHandler.appendCompressedUnknownDNAInfo(i, @base);
+                }
+                if (@base == DNABases.UNRECOGNIZED) continue;
                 baseArray[count] = @base;
 
                 count++;
@@ -73,50 +85,45 @@
             }
         }
 
+        public static DNABases GetDNABaseAtIndex(int index, ref byte[] byteList)
+        {
+            // Returns the DNA base at any position. Throws exception if it is outside of bounds
+            int byteIndex = index / 4;
+            int bitOffset = (index & 3) << 1;
+            if (byteIndex >= byteList.Length - 1)
+            {
+                if (bitOffset >= 8-endPadding) throw new System.ArgumentOutOfRangeException($"Index {index} was outside of bounds for array {byteList}");
+            }
+            byte mask = (byte)(3 << (6 - bitOffset));
+
+            //System.Console.WriteLine("\nByte index: {0}, bit offset: {1}", byteIndex, bitOffset);
+
+            return (DNABases)((byteList[byteIndex] & mask) >> (6 - bitOffset));
+        }
+
         public static Codon? GetCodonAtPosition(int position, ref byte[] byteList)
         {
             //position 0 will return the first 6 bits of the bytelist list as a codon
             //position 3 will return bits 18-24 of the bytelist list as a codon
 
-            int startBit = position * 6; //Position is 0, multiply 0 by 6 to get 0, Position is 1, multiply 1 by 6 to get 6
-            int endBit = (position * 6) + 6; //Position is 0, multiply 0 by 6 and add 6 to get 6, Position is 1, multiply 1 by 6 and add 6 to get 12
+            //position 1 is 3-4-5
 
-            int index = startBit / 8;
+            //GetDNABaseAtIndex function
 
-            if (index >= byteList.Length) return null;
-            byte neededByte = byteList[index];
-            byte adjacentByte = 0;
-            bool hasAdjacentByte = false;
-            int localBitshift = startBit - (index * 8);
+            mRNABases[] bases = new mRNABases[3];
 
-            if (localBitshift <= 2)
+            for (int i = 0; i < 3; i++)
             {
-                return new Codon(
-                    (mRNABases)((neededByte & (3 << 6) >> localBitshift) >> 6),
-                    (mRNABases)((neededByte & (3 << 6) >> localBitshift + 2) >> 4),
-                    (mRNABases)((neededByte & (3 << 6) >> localBitshift + 4) >> 2));
+
+                int byteIndex = ((position * 6) + (i * 2)) / 8;
+                int bitOffset = ((((position * 6) + (i * 2))) & 7);
+                byte mask = (byte)(3 << (6 - bitOffset));
+
+                mRNABases @base = (mRNABases)((byteList[byteIndex] & mask) >> (6 - bitOffset));
+                bases[i] = @base;
             }
 
-            try
-            {
-                adjacentByte = byteList[index + 1];
-                hasAdjacentByte = true;
-            }
-            catch {
-                return null;
-            }
-
-            if (hasAdjacentByte)
-            {
-                ushort completeByte = (ushort)((neededByte << 8) | adjacentByte);
-
-                return new Codon(
-                    (mRNABases)((completeByte & (3 << 14) >> localBitshift) >> (16 - (localBitshift + 2))),
-                    (mRNABases)((completeByte & (3 << 14) >> localBitshift + 2) >> (14 - (localBitshift + 2))),
-                    (mRNABases)((completeByte & (3 << 14) >> localBitshift + 4) >> (12 - (localBitshift + 2))));
-            }
-
-            return null;
+            return new Codon(bases[0], bases[1], bases[2]);
         }
 
         public static byte? PackByte(DNABases[] bases)
@@ -128,7 +135,6 @@
             for (int i=0; i<bases.Length; i++)
             {
                 byte baseAsByte = ConvertBaseToByte(bases[i]);
-
                 MergeBytes(baseAsByte, ref output);
             }
 

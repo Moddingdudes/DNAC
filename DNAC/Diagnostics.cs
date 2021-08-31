@@ -4,7 +4,7 @@ namespace DNAC
 {
     public static class Diagnostics
     {
-        public static void PrintAsBinary(byte num)
+        public static void PrintAsBinary(byte num, bool endLine)
         {
             int remainder;
             string result = string.Empty;
@@ -24,6 +24,8 @@ namespace DNAC
 
 
             Console.Write("{0}", final + result);
+
+            if (endLine) Console.Write("\n");
         }
 
         public static void PrintCodon(Codon codon, bool printProtein)
@@ -35,7 +37,7 @@ namespace DNAC
             }
         }
 
-        public static void FillRandomBases(uint count, ref byte[] byteList)
+        public static void FillRandomBases(int count, ref byte[] byteList)
         {
             if ((count & 3) == 0)
             {
@@ -46,23 +48,16 @@ namespace DNAC
                 byteList = new byte[(count / 4) + 1];
             }
 
-            DNABases[] baseArray = new DNABases[4];
+            System.Random random = new Random();
+            int rand;
 
-            uint index = 0;
-
-            for (uint i = 1; i <= count; i++)
+            for (int i = 0; i < count; i++)
             {
-                System.Random random = new Random();
+                
 
-                int rand = random.Next(0, 4);
+                rand = random.Next(0, 4);
 
-                baseArray[i % 4] = (DNABases)rand;
-
-                if (i % 4 == 0)
-                {
-                    byteList[index] = Bitpacker.PackByte(baseArray).GetValueOrDefault();
-                    index++;
-                }
+                byteList[i / 4] = (byte)(byteList[i / 4] | (rand << ((i & 3) << 1)));
             }
         }
     }
